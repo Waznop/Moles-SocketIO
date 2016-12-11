@@ -170,7 +170,7 @@ public class MenuScreen implements Screen {
                     "- Arrow keys to move, space bar to dig/pop.\n" +
                     "- You can only be underground if you have enough energy.\n" +
                     "- You get a point if you pop up underneath someone else.\n" +
-                    "- You lose a point if you get popped or if you pop up underneath a rock.\n" +
+                    "- You lose a point if you pop up underneath a rock.\n" +
                     "- First one to 10 points wins!\n\n" +
                     "Good luck and have fun :)\n\n" +
                     "- Waznop");

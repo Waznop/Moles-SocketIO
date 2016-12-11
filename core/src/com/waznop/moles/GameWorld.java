@@ -219,12 +219,16 @@ public class GameWorld {
 
                     if (id.equals(player.getId())) {
                         player.die();
-                        player.setScore(player.getScore() - 1);
+                        if (killer.equals("")) {
+                            player.setScore(player.getScore() - 1);
+                        }
                     } else {
                         Mole other = others.get(id);
                         if (other != null) {
                             other.die();
-                            other.setScore(other.getScore() - 1);
+                            if (killer.equals("")) {
+                                other.setScore(other.getScore() - 1);
+                            }
                         }
                     }
                 } catch (JSONException e) {
