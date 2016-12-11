@@ -31,6 +31,7 @@ public class MenuScreen implements Screen {
     private Array<Room> rooms;
     private TextButton create;
     private TextButton join;
+    private TextButton mute;
     private Skin skin;
     private Label label;
     private Label nameLabel;
@@ -78,9 +79,12 @@ public class MenuScreen implements Screen {
         join = new TextButton("JOIN", skin, "round");
         join.pad(10);
         join.setDisabled(true);
+        mute = new TextButton("MUTE", skin, "radio");
+        if (AssetLoader.muted) mute.toggle();
         buttonsTable = new Table(skin);
         buttonsTable.add(join).padRight(10);
-        buttonsTable.add(create);
+        buttonsTable.add(create).padRight(10);
+        buttonsTable.add(mute);
 
         create.addListener(new ChangeListener() {
             @Override
@@ -128,6 +132,18 @@ public class MenuScreen implements Screen {
                     return;
                 }
                 joinRoom(room.getRoomId());
+            }
+        });
+
+        mute.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                AssetLoader.muted = ! AssetLoader.muted;
+                if (AssetLoader.muted) {
+                    AssetLoader.gameMusic.setVolume(0);
+                } else {
+                    AssetLoader.gameMusic.setVolume(1);
+                }
             }
         });
 
@@ -208,6 +224,7 @@ public class MenuScreen implements Screen {
             try {
                 data.put("name", name);
                 data.put("level", getLevel());
+                data.put("version", Constants.VERSION);
                 networkManager.getSocket().emit("playerRegistered", data);
             } catch (JSONException e) {
                 Gdx.app.log("SocketIO", "Error sending registration info");

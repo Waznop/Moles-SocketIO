@@ -40,6 +40,7 @@ public class AssetLoader {
     public static Sound spawnSound;
     public static Sound deathSound;
     public static Music gameMusic;
+    public static boolean muted = false;
 
     public static Skin uiSkin;
     public static TextureAtlas uiAtlas;

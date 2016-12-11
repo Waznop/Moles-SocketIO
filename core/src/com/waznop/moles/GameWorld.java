@@ -121,7 +121,7 @@ public class GameWorld {
                     int y = data.getInt("y");
                     int level = data.getInt("level");
                     others.put(id, createMole(id, name, x, y, false, true, false, 0, level));
-                    AssetLoader.spawnSound.play();
+                    if (! AssetLoader.muted) AssetLoader.spawnSound.play();
                     // Gdx.app.log("SocketIO", "Player connected: " + id);
                 } catch (JSONException e) {
                     Gdx.app.log("SocketIO", "Error connecting player");
@@ -273,7 +273,7 @@ public class GameWorld {
                             victoryMsg = "A bug wins!";
                         }
                     }
-                    AssetLoader.victorySound.play();
+                    if (! AssetLoader.muted) AssetLoader.victorySound.play();
                     Dialog dialog = new Dialog("Game Finished", AssetLoader.uiSkin) {
                         public void result(Object obj) {
                             gameScreen.setGameFinished(true);

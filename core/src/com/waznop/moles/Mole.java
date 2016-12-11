@@ -131,7 +131,7 @@ public class Mole {
         energy = Constants.ENERGY_MAX;
         animationTimer = 0;
         transitioning = false;
-        spawnSound.play();
+        if (! AssetLoader.muted) spawnSound.play();
     }
 
     public void die() {
@@ -139,7 +139,7 @@ public class Mole {
         isAlive = false;
         transitioning = true;
         animationTimer = 0;
-        deathSound.play();
+        if (! AssetLoader.muted) deathSound.play();
     }
 
     private void forcePop() {
@@ -151,14 +151,14 @@ public class Mole {
         underground = false;
         transitioning = true;
         animationTimer = 0;
-        popSound.play();
+        if (! AssetLoader.muted) popSound.play();
     }
 
     public void dig() {
         underground = true;
         transitioning = true;
         animationTimer = 0;
-        digSound.play();
+        if (! AssetLoader.muted) digSound.play();
     }
 
     public boolean checkDig() {
