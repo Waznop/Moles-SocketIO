@@ -11,10 +11,12 @@ public class InputHandler implements InputProcessor {
 
     private GameScreen gameScreen;
     private GameWorld world;
+    private boolean canSendMessage;
 
     public InputHandler(GameScreen gameScreen) {
         this.gameScreen = gameScreen;
         world = gameScreen.getWorld();
+        canSendMessage = false;
     }
 
     @Override
@@ -29,6 +31,9 @@ public class InputHandler implements InputProcessor {
             return world.movePlayer(Direction.RIGHT);
         } else if (keycode == Input.Keys.SPACE) {
             return world.digOrPop();
+        } else if (keycode == Input.Keys.ENTER) {
+            canSendMessage = true;
+            return false;
         } else if (keycode == Input.Keys.Q) {
             gameScreen.setGameFinished(true);
         } else {
@@ -39,6 +44,10 @@ public class InputHandler implements InputProcessor {
 
     @Override
     public boolean keyUp(int keycode) {
+        if (keycode == Input.Keys.ENTER && canSendMessage) {
+            world.sendMessage();
+            return true;
+        }
         return false;
     }
 

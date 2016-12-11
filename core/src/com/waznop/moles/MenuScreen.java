@@ -24,7 +24,7 @@ public class MenuScreen implements Screen {
 
     private MolesGame game;
     private Stage stage;
-    private Table table;
+    private Table roomsTable;
     private Table buttonsTable;
     private List list;
     private ScrollPane scrollPane;
@@ -39,6 +39,14 @@ public class MenuScreen implements Screen {
     private Room roomToGo;
     private int victories;
     private Preferences data;
+    private TextField chatField;
+    private ScrollPane messagesPane;
+    private List messagesList;
+    private Array<Message> messages;
+    private Table chatTable;
+    private Table table;
+    private Label welcomeLabel;
+    private int numPlayers;
 
     public MenuScreen(MolesGame game) {
         this.game = game;
@@ -57,13 +65,14 @@ public class MenuScreen implements Screen {
         roomToGo = null;
         victories = data.getInteger("victories");
 
-        list = new List(skin, "dimmed");
+        list = new List(skin, "messages");
         list.setItems(rooms.size > 0 ? rooms : "No open rooms currently.");
 
         label = new Label("MOLES", skin, "title");
         label.setFontScale(2);
-        nameLabel = new Label(name == null ? "[?] Anonymous" : "[" + getLevel() + "] " + name, skin);
+        nameLabel = new Label(name == null ? "Not connected" : "[" + getLevel() + "] " + name, skin);
         scrollPane = new ScrollPane(list, skin, "android");
+        scrollPane.setFadeScrollBars(false);
         create = new TextButton("CREATE", skin, "round");
         create.pad(10);
         join = new TextButton("JOIN", skin, "round");
@@ -76,9 +85,12 @@ public class MenuScreen implements Screen {
         create.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.input.getTextInput(new Input.TextInputListener() {
-                    @Override
-                    public void input(String text) {
+                TextField textField = new TextField("", skin);
+
+                Dialog dialog = new Dialog("Creating room", skin) {
+                    protected void result(Object object) {
+                        TextField textField = (TextField) object;
+                        String text = textField.getText();
                         try {
                             int numPlayers;
                             if (text.trim().length() == 0) {
@@ -93,15 +105,17 @@ public class MenuScreen implements Screen {
                             }
                             createRoom(numPlayers);
                         } catch (NumberFormatException e) {
-                            Gdx.app.log("LibGDX", "Did not input a number");
+                            Gdx.app.log("LibGDX", "Did not input a number - Default to 2");
+                            createRoom(2);
                         }
                     }
-
-                    @Override
-                    public void canceled() {
-                        Gdx.app.log("LibGDX", "Room creation cancelled");
-                    }
-                }, "Enter the maximum number of players", "", "2-8");
+                };
+                dialog.text("Please enter the maximum room size (2-8).");
+                dialog.row();
+                dialog.add(textField);
+                dialog.key(Input.Keys.ENTER, textField);
+                dialog.show(stage);
+                stage.setKeyboardFocus(textField);
             }
         });
 
@@ -117,23 +131,64 @@ public class MenuScreen implements Screen {
             }
         });
 
-        table = new Table(skin);
-        table.setFillParent(true);
-        table.pad(40);
-        table.add(label);
-        table.row();
-        table.add(nameLabel);
-        table.row().padTop(20);
-        table.add(scrollPane).expand();
-        table.row().padTop(20);
-        table.add(buttonsTable);
+        chatField = new TextField("", skin);
+        chatField.setTextFieldListener(new TextField.TextFieldListener() {
+            @Override
+            public void keyTyped(TextField textField, char c) {
+                String text = textField.getText();
+                if (c == '\r') {
+                    if (! text.equals("") && name != null) {
+                        networkManager.getSocket().emit("lobbyMessage", text);
+                        updateMessages(name, text);
+                    }
+                    textField.setText("");
+                }
+            }
+        });
+        welcomeLabel = new Label("Number of players online: ?", skin);
+        messages = new Array<Message>();
+        messages.add(new Message("", "Welcome to Moles " + Constants.VERSION + "!"));
 
+        messagesList = new List(skin, "messages");
+        messagesList.setItems(messages);
+        messagesPane = new ScrollPane(messagesList, skin, "android");
+        messagesPane.setFadeScrollBars(false);
+
+        chatTable = new Table(skin);
+        chatTable.add(welcomeLabel);
+        chatTable.row().padTop(20);
+        chatTable.add(messagesPane).fill().expand();
+        chatTable.row().padTop(20);
+        chatTable.add(chatField).fill().padLeft(10).padRight(10);
+        chatTable.padTop(20);
+        chatTable.padBottom(20);
+        chatTable.padLeft(30);
+
+        roomsTable = new Table(skin);
+        roomsTable.add(label);
+        roomsTable.row();
+        roomsTable.add(nameLabel);
+        roomsTable.row().padTop(20);
+        roomsTable.add(scrollPane).fill().expand();
+        roomsTable.row().padTop(20);
+        roomsTable.add(buttonsTable);
+
+        table = new Table(skin);
+        table.add(roomsTable).fill().expand();
+        table.add(chatTable).fill().expand();
+        table.pad(40);
+        table.setFillParent(true);
+
+        stage.setKeyboardFocus(chatField);
         stage.addActor(table);
 
         if (name == null) {
-            Gdx.input.getTextInput(new Input.TextInputListener() {
-                @Override
-                public void input(String text) {
+            TextField textField = new TextField("", skin);
+
+            Dialog dialog = new Dialog("Greetings!", skin) {
+                protected void result(Object object) {
+                    TextField textField = (TextField) object;
+                    String text = textField.getText();
                     if (text.trim().length() > 0) {
                         name = text;
                     } else {
@@ -141,13 +196,13 @@ public class MenuScreen implements Screen {
                     }
                     setup();
                 }
-
-                @Override
-                public void canceled() {
-                    name = "Anonymous";
-                    setup();
-                }
-            }, "Enter your name:", "", "Name");
+            };
+            dialog.text("What is your name?");
+            dialog.row();
+            dialog.add(textField);
+            dialog.key(Input.Keys.ENTER, textField);
+            dialog.show(stage);
+            stage.setKeyboardFocus(textField);
         } else {
             JSONObject data = new JSONObject();
             try {
@@ -161,13 +216,14 @@ public class MenuScreen implements Screen {
     }
 
     private void setup() {
-        table.getCell(nameLabel).getActor().setText("[" + getLevel() + "] " + name);
+        roomsTable.getCell(nameLabel).getActor().setText("[" + getLevel() + "] " + name);
         configSocketEvents();
         networkManager.connectSocket();
         if (data.getBoolean("firstTime")) {
             Dialog dialog = new Dialog("Welcome to Moles!", skin);
             dialog.text("\nChoose a room and battle it out with your friends!\n\n" +
                     "- Arrow keys to move, space bar to dig/pop.\n" +
+                    "- Enter to chat, Q to quit a room.\n" +
                     "- You can only be underground if you have enough energy.\n" +
                     "- You get a point if you pop up underneath someone else.\n" +
                     "- You lose a point if you pop up underneath a rock.\n" +
@@ -192,6 +248,7 @@ public class MenuScreen implements Screen {
                 try {
                     data.put("name", name);
                     data.put("level", getLevel());
+                    data.put("version", Constants.VERSION);
                     socket.emit("playerRegistered", data);
                 } catch (JSONException e) {
                     Gdx.app.log("SocketIO", "Error sending registration info");
@@ -201,9 +258,23 @@ public class MenuScreen implements Screen {
             @Override
             public void call(Object... args) {
                 Gdx.app.log("SocketIO", "Server is offline");
+                roomsTable.getCell(nameLabel).getActor().setText("Server is offline");
                 create.setDisabled(true);
                 Dialog dialog = new Dialog("Error", AssetLoader.uiSkin);
                 dialog.text("Server is offline.");
+                dialog.button("OK", true);
+                dialog.key(Input.Keys.ENTER, true);
+                dialog.show(stage);
+            }
+        }).once("wrongVersion", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                Gdx.app.log("SocketIO", "Wrong version");
+                roomsTable.getCell(nameLabel).getActor().setText("https://github.com/Waznop/Moles-SocketIO");
+                create.setDisabled(true);
+                Dialog dialog = new Dialog("Error", AssetLoader.uiSkin);
+                dialog.text("\nYou have an outdated version of the game.\n\n" +
+                        "Please download the latest version on GitHub.\n");
                 dialog.button("OK", true);
                 dialog.key(Input.Keys.ENTER, true);
                 dialog.show(stage);
@@ -253,7 +324,7 @@ public class MenuScreen implements Screen {
                     try {
                         JSONObject room = (JSONObject) data.get(key);
                         boolean open = room.getBoolean("open");
-                        if (! open) {
+                        if (!open) {
                             continue;
                         }
                         int roomId = room.getInt("id");
@@ -337,6 +408,55 @@ public class MenuScreen implements Screen {
                     Gdx.app.log("SocketIO", "Error getting room with new player");
                 }
             }
+        }).on("getNumPlayers", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                JSONObject data = (JSONObject) args[0];
+                try {
+                    numPlayers = data.getInt("numPlayers");
+                    updateNumPlayers();
+                } catch (JSONException e) {
+                    Gdx.app.log("SocketIO", "Error getting number of players");
+                }
+            }
+        }).on("lobbyMessage", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                JSONObject data = (JSONObject) args[0];
+                try {
+                    String sender = data.getString("sender");
+                    String content = data.getString("content");
+                    updateMessages(sender, content);
+                } catch (JSONException e) {
+                    Gdx.app.log("SocketIO", "Error getting message");
+                }
+            }
+        }).on("playerLoggedIn", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                JSONObject data = (JSONObject) args[0];
+                try {
+                    String player = data.getString("name");
+                    numPlayers += 1;
+                    updateNumPlayers();
+                    updateMessages("", player + " logged in.");
+                } catch (JSONException e) {
+                    Gdx.app.log("SocketIO", "Error getting logged in player");
+                }
+            }
+        }).on("playerLoggedOut", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                JSONObject data = (JSONObject) args[0];
+                try {
+                    String player = data.getString("name");
+                    numPlayers -= 1;
+                    updateNumPlayers();
+                    updateMessages("", player + " logged out.");
+                } catch (JSONException e) {
+                    Gdx.app.log("SocketIO", "Error getting logged out player");
+                }
+            }
         });
     }
 
@@ -362,6 +482,19 @@ public class MenuScreen implements Screen {
         } catch (JSONException e) {
             Gdx.app.log("SocketIO", "Error getting removed room");
         }
+    }
+
+    private void updateNumPlayers() {
+        welcomeLabel.setText("Number of players online: " + numPlayers);
+    }
+
+    private void updateMessages(String sender, String content) {
+        if (messages.size == Constants.MAX_MESSAGES) {
+            messages.removeIndex(0);
+        }
+        messages.add(new Message(sender, content));
+        messagesList.setItems(messages);
+        messagesPane.setScrollPercentY(1);
     }
 
     private int getLevel() {

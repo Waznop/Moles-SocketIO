@@ -17,5 +17,8 @@ public class Constants {
     public final static double ENERGY_LOSS = 10;
     public final static double ENERGY_MIN = 5;
     public final static String SERVER = "https://moles-socketio.herokuapp.com/";
+    public final static String VERSION = "v2.0.2";
+    public final static int MAX_MESSAGES = 50;
+    public final static float MESSAGE_TIMER = 3;
 
 }

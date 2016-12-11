@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
 import org.json.JSONArray;
@@ -31,6 +32,7 @@ public class GameWorld {
     private GameScreen gameScreen;
     private Stage stage;
     private String name;
+    private boolean sendingMessage;
 
     public GameWorld(NetworkManager networkManager, GameScreen gameScreen, Stage stage, Room room, String name) {
         this.networkManager = networkManager;
@@ -43,6 +45,7 @@ public class GameWorld {
         rocks = new HashMap<Vector2, MapObject>();
         borders = new HashMap<Vector2, MapObject>();
         ground = new HashMap<Vector2, MapObject>();
+        sendingMessage = false;
         initMap();
         configSocketEvents();
         JSONObject data = new JSONObject();
@@ -235,10 +238,25 @@ public class GameWorld {
                     Gdx.app.log("SocketIO", "Error respawning player");
                 }
             }
+        }).on("playerMessage", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                JSONObject data = (JSONObject) args[0];
+                try {
+                    String id = data.getString("id");
+                    String msg = data.getString("msg");
+                    Mole other = others.get(id);
+                    if (other != null) {
+                        other.talk(msg);
+                    }
+                } catch (JSONException e) {
+                    Gdx.app.log("SocketIO", "Error getting message");
+                }
+            }
         }).once("playerWin", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                JSONObject data = (JSONObject)args[0];
+                JSONObject data = (JSONObject) args[0];
                 try {
                     String id = data.getString("id");
                     String victoryMsg;
@@ -320,6 +338,31 @@ public class GameWorld {
                 }
             }
         });
+    }
+
+    public void sendMessage() {
+        if (sendingMessage) {
+            sendingMessage = false;
+        } else {
+            final TextField textField = new TextField("", AssetLoader.uiSkin);
+            textField.setPosition(10, 10);
+            textField.setTextFieldListener(new TextField.TextFieldListener() {
+                @Override
+                public void keyTyped(TextField textField, char c) {
+                    if (c == '\r') {
+                        String text = textField.getText();
+                        if (text.trim().length() != 0 && player != null) {
+                            player.talk(text);
+                            networkManager.getSocket().emit("playerMessaged", text);
+                        }
+                        textField.remove();
+                    }
+                }
+            });
+            stage.addActor(textField);
+            stage.setKeyboardFocus(textField);
+            sendingMessage = true;
+        }
     }
 
     public void update(float delta) {

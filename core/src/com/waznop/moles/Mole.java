@@ -28,6 +28,8 @@ public class Mole {
     private Sound popSound;
     private Sound spawnSound;
     private Sound deathSound;
+    private float messageTimer;
+    private String message;
 
     public Mole(GameWorld world, String id, String name, int x, int y,
                 boolean underground, boolean alive, boolean player, int score, int level) {
@@ -50,6 +52,8 @@ public class Mole {
         popSound = AssetLoader.popSound;
         spawnSound = AssetLoader.spawnSound;
         deathSound = AssetLoader.deathSound;
+        messageTimer = 0;
+        message = "";
     }
 
     public void update(float delta) {
@@ -78,6 +82,13 @@ public class Mole {
             }
         }
 
+        if (messageTimer > 0) {
+            messageTimer -= delta;
+            if (messageTimer < 0) {
+                messageTimer = 0;
+            }
+        }
+
         double speed = Constants.MOLE_SPEED;
 
         if (actualPos.x < tilePos.x) {
@@ -97,6 +108,11 @@ public class Mole {
             actualPos.y -= speed * delta;
             if (actualPos.y < tilePos.y) actualPos.y = tilePos.y;
         }
+    }
+
+    public void talk(String msg) {
+        message = msg;
+        messageTimer = Constants.MESSAGE_TIMER;
     }
 
     private void respawn() {
@@ -220,5 +236,13 @@ public class Mole {
 
     public void setScore(int score) {
         this.score = score;
+    }
+
+    public float getMessageTimer() {
+        return messageTimer;
+    }
+
+    public String getMessage() {
+        return message;
     }
 }

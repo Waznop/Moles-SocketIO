@@ -97,7 +97,13 @@ public class GameRenderer {
         batcher.draw(image, facingLeft ? x+width : x, y, facingLeft ? -width : width, height);
 
         if (! transitioning) {
-            font.draw(batcher, "[" + mole.getLevel() + "] " + mole.getName(), x + width / 2, y + height, 0, 1, false);
+            font.draw(batcher, mole.getName(), x + width / 2, y + height, 0, 1, false);
+        }
+
+        if (! transitioning || ! isAlive) {
+            if (mole.getMessageTimer() > 0) {
+                font.draw(batcher, mole.getMessage(), x + width / 2, y - 10, 0, 1, false);
+            }
         }
     }
 
